@@ -1,1 +1,0 @@
-# Smart-health-monitoring-system
