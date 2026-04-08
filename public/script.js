@@ -164,7 +164,15 @@ function buildReminderForm(watchID, listEl, statusEl) {
   frm.innerHTML  = `
     <input name="medicine" placeholder="Medicine Name" required>
     <input name="time" type="time" required>
-    <input name="repeat" placeholder="Repeat days (Daily or Mon,Wed,Fri)" required>
+    <div class="repeat-days">
+      <label><input type="checkbox" value="Mon"> Mon</label>
+      <label><input type="checkbox" value="Tue"> Tue</label>
+      <label><input type="checkbox" value="Wed"> Wed</label>
+      <label><input type="checkbox" value="Thu"> Thu</label>
+      <label><input type="checkbox" value="Fri"> Fri</label>
+      <label><input type="checkbox" value="Sat"> Sat</label>
+      <label><input type="checkbox" value="Sun"> Sun</label>
+    </div>
     <div class="reminder-actions">
       <button type="submit">Save</button>
       <button type="button" class="secondary-btn rem-cancel">Close</button>
