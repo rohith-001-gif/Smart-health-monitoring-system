@@ -660,3 +660,52 @@ button:hover {
     right: -80px;
   }
 }
+.repeat-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.repeat-days label {
+  font-size: 12px;
+  background: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.reminders-cell {
+  min-width: 280px;
+}
+
+.reminder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reminder-form input {
+  width: 100%;
+}
+
+.reminder-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.reminder-head {
+  margin-bottom: 6px;
+}
+
+.reminder-list {
+  margin-bottom: 8px;
+}
+.reminder-form input,
+.reminder-form button {
+  border-radius: 8px;
+}
+
+.reminder-form {
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 10px;
+}
