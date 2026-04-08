@@ -130,9 +130,17 @@ function renderChart(readings, metric) {
   const color = metric === "spo2" ? "#1d4ed8" : metric === "steps" ? "#0f766e" : "#be123c";
 
   lineChart.innerHTML = `
-    <polyline fill="none" stroke="${color}" stroke-width="3" points="${points}"/>
-    <text x="14" y="20" fill="#6b7280" font-size="12">Min: ${min.toFixed(1)}</text>
-    <text x="14" y="38" fill="#6b7280" font-size="12">Max: ${max.toFixed(1)}</text>`;
+  <polyline 
+    fill="none" 
+    stroke="${color}" 
+    stroke-width="3" 
+    points="${points}"
+    stroke-dasharray="1000"
+    stroke-dashoffset="1000"
+    class="chart-line"
+  />
+`;
+   
 }
 
 // ── Render: reminders ─────────────────────────────────────────────────────────

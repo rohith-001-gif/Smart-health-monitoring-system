@@ -709,3 +709,94 @@ button:hover {
   padding: 10px;
   border-radius: 10px;
 }
+body.dark {
+  --card: #0f172a;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: rgba(255,255,255,0.1);
+  background: #020617;
+}
+
+body.dark .card {
+  background: #0f172a;
+  color: white;
+}
+
+body.dark input {
+  background: #020617;
+  color: white;
+}
+@media (max-width: 768px) {
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .patient-details {
+    grid-template-columns: 1fr;
+  }
+
+  .watches-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+}
+.chart-line {
+  animation: drawLine 2s ease forwards;
+}
+
+@keyframes drawLine {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.notification-panel {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+* {
+  transition: all 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px) scale(1.01);
+}
+
+button:hover {
+  transform: scale(1.05);
+}
+.repeat-days label {
+  background: #e0f2fe;
+  padding: 5px 10px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.repeat-days input {
+  display: none;
+}
+
+.repeat-days input:checked + label {
+  background: #0ea5e9;
+  color: white;
+}

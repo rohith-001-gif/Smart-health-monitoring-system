@@ -1,3 +1,8 @@
+const themeToggle = document.getElementById("themeToggle");
+
+themeToggle.addEventListener("click", () => {
+  document.body.classList.toggle("dark");
+});
 // ── Auth guard ────────────────────────────────────────────────────────────────
 const doctorEmail = localStorage.getItem("doctor");
 if (!doctorEmail) window.location.href = "login.html";
@@ -184,13 +189,19 @@ function buildReminderForm(watchID, listEl, statusEl) {
     e.preventDefault();
     statusEl.textContent = "";
 
-    const payload = {
-      watch_id:      watchID,
-      medicine_name: frm.medicine.value.trim(),
-      time:          frm.time.value.trim(),
-      repeat_days:   frm.repeat.value.trim(),
-      doctor_email:  doctorEmail
-    };
+    const selectedDays = Array.from(
+  frm.querySelectorAll("input[type='checkbox']:checked")
+)
+  .map(cb => cb.value)
+  .join(",");
+
+const payload = {
+  watch_id: watchID,
+  medicine_name: frm.medicine.value.trim(),
+  time: frm.time.value.trim(),
+  repeat_days: selectedDays,
+  doctor_email: doctorEmail
+};
 
     if (!payload.medicine_name || !payload.time || !payload.repeat_days) {
       statusEl.textContent = "All fields are required.";
@@ -403,3 +414,9 @@ loadDoctorWatches();
 loadNotifications();
 setInterval(loadNotifications, 15000);
 setInterval(() => { if (latestWatches.length) updateConnectivity(latestWatches); }, 20000);
+
+const beep = new Audio("https://www.soundjay.com/buttons/beep-01a.mp3");
+
+function triggerAlert() {
+  beep.play();
+}
