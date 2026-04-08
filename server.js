@@ -532,6 +532,9 @@ app.post("/aiChat", async (req, res) => {
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "login.html"));
+});
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Arogya server running on port ${PORT}`);
 });
