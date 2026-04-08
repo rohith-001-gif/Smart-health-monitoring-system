@@ -1,0 +1,26 @@
+# ─── Environment (NEVER commit these) ────────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ─── Node ─────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Old local data files (no longer used — everything is in Supabase) ────────
+data/
+*.json
+!package.json
+!package-lock.json
+
+# ─── OS junk ──────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Editor ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo

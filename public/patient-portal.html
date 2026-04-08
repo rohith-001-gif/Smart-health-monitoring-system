@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Portal – Arogya</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="patient-theme">
+  <div class="lux-bg" aria-hidden="true">
+    <span class="lux-orb orb-one"></span>
+    <span class="lux-orb orb-two"></span>
+    <span class="lux-orb orb-three"></span>
+    <span class="lux-grid"></span>
+  </div>
+
+  <div class="page-shell">
+    <header class="stats-header">
+      <div>
+        <h1 id="portalTitle">Patient Portal</h1>
+        <p class="subtle" id="portalInfo">Loading profile…</p>
+      </div>
+      <button id="logoutPatientBtn" class="secondary-btn" type="button">Logout</button>
+    </header>
+
+    <section class="card">
+      <h2>Patient Details</h2>
+      <div class="patient-details" id="patientDetails"></div>
+    </section>
+
+    <section class="card">
+      <h2>Vitals Snapshot</h2>
+      <div class="stats-grid" id="snapshotCards"></div>
+    </section>
+
+    <section class="card">
+      <h2>Vitals Trend</h2>
+      <div class="chart-wrap">
+        <div class="chart-head">
+          <label>Metric
+            <select id="metricSelect">
+              <option value="hr">Heart Rate</option>
+              <option value="spo2">SpO2</option>
+              <option value="steps">Steps</option>
+            </select>
+          </label>
+          <p class="subtle">Last 30 readings</p>
+        </div>
+        <svg id="lineChart" class="line-chart" viewBox="0 0 800 280" preserveAspectRatio="none"></svg>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>My Reminders</h2>
+      <ul id="reminderList" class="reminder-list"></ul>
+    </section>
+
+    <section class="card">
+      <h2>Health Assistant</h2>
+      <div class="chatbot">
+        <div id="chatLog" class="chat-log"></div>
+        <div class="chat-input-row">
+          <input id="chatInput" placeholder="Ask about your latest vitals, trends, or next steps…">
+          <button id="chatSendBtn" type="button">Send</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="patient-portal.js"></script>
+</body>
+</html>

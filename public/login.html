@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Health Login</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <div class="bg-scene" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+    <span class="grid-glow"></span>
+  </div>
+
+  <main class="login-shell">
+    <section class="brand-panel">
+      <p class="eyebrow">Smart Health System</p>
+      <h1>Live care insights for doctors and patients</h1>
+      <p class="intro">Monitor vitals, detect critical events, and collaborate with faster decisions through one connected dashboard.</p>
+      <ul>
+        <li>Real-time watch analytics</li>
+        <li>Critical notifications</li>
+        <li>Patient trend intelligence</li>
+      </ul>
+    </section>
+
+    <section class="login-card">
+      <div class="tabs" role="tablist" aria-label="Login type">
+        <button id="doctorTab" class="tab active" role="tab" aria-selected="true" type="button">Doctor Login</button>
+        <button id="patientTab" class="tab" role="tab" aria-selected="false" type="button">Patient Login</button>
+      </div>
+
+      <form id="doctorForm" class="auth-form active" autocomplete="off">
+        <label>Email</label>
+        <input id="doctorEmail" type="email" placeholder="doctor@email.com" required>
+
+        <label>Password</label>
+        <input id="doctorPass" type="password" placeholder="Enter password" required>
+
+        <button class="primary-btn" type="submit">Login as Doctor</button>
+      </form>
+
+      <form id="patientForm" class="auth-form" autocomplete="off">
+        <label>Watch ID</label>
+        <input id="patientWatchID" placeholder="WCH123..." required>
+
+        <label>Email</label>
+        <input id="patientEmail" type="email" placeholder="patient@email.com" required>
+
+        <button class="primary-btn" type="submit">Login as Patient</button>
+      </form>
+
+      <p id="loginMessage" class="login-message"></p>
+    </section>
+  </main>
+
+  <script src="login.js"></script>
+</body>
+</html>

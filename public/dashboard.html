@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Dashboard – Arogya</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="doctor-theme">
+  <div class="lux-bg" aria-hidden="true">
+    <span class="lux-orb orb-one"></span>
+    <span class="lux-orb orb-two"></span>
+    <span class="lux-orb orb-three"></span>
+    <span class="lux-grid"></span>
+  </div>
+
+  <div class="page-shell">
+    <header class="dashboard-header">
+      <div>
+        <h1>Doctor Dashboard</h1>
+        <p id="doctorEmailText">Signed in doctor: –</p>
+      </div>
+      <div class="header-actions">
+        <div class="notification-wrap">
+          <button id="notificationBtn" class="notification-btn" type="button" aria-label="Notifications">
+            <span class="bell">&#128276;</span>
+            <span id="notificationBadge" class="notification-badge" hidden>0</span>
+          </button>
+          <div id="notificationPanel" class="notification-panel" hidden>
+            <h3>Critical Alerts</h3>
+            <ul id="notificationList" class="notification-list"></ul>
+          </div>
+        </div>
+        <button id="logoutBtn" class="secondary-btn" type="button">Logout</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2 id="formTitle">Add Watch and Link Patient</h2>
+      <p class="subtle">
+        Hardware endpoint (copy to ESP32 firmware):&nbsp;
+        <strong id="hardwareEndpoint">–</strong>
+      </p>
+      <form id="watchForm" autocomplete="off">
+        <div class="form-grid grid-6">
+          <input id="watchID"    placeholder="Watch ID (e.g. WCH001)" required>
+          <input id="name"       placeholder="Patient Name" required>
+          <input id="email"      type="email" placeholder="Patient Email" required>
+          <input id="age"        placeholder="Age">
+          <input id="condition"  placeholder="Condition">
+          <input id="phone"      placeholder="Phone">
+        </div>
+        <div class="form-actions">
+          <button id="submitBtn" type="submit">Add Watch Link</button>
+          <button id="cancelEditBtn" class="secondary-btn" type="button" hidden>Cancel Edit</button>
+        </div>
+      </form>
+      <p id="statusMsg" class="status-msg"></p>
+    </section>
+
+    <section class="card">
+      <h2>Linked Watches</h2>
+      <div id="watchesList"><p>Loading…</p></div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
