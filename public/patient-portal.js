@@ -209,7 +209,7 @@ async function onSendChat() {
     const res    = await fetch("/aiChat", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ role: "patient", question: text, context: buildContext() })
+      body:    JSON.stringify({ role: "patient", question: text, context: buildContext(), watchID: session.watchID })
     });
     const result = await res.json();
     pushChatMessage("Bot:", result.success && result.answer ? result.answer : localFallback(text));

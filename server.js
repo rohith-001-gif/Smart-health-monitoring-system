@@ -131,6 +131,48 @@ async function dbInsertReading(entry) {
   if (error) throw new Error(error.message);
 }
 
+function hrTrend(values) {
+  if (!Array.isArray(values) || values.length < 2) return "stable";
+  const first = values[0];
+  const last  = values[values.length - 1];
+  const delta = last - first;
+  const threshold = 3;
+  if (delta > threshold)  return "increasing";
+  if (delta < -threshold) return "decreasing";
+  return "stable";
+}
+
+async function buildReadingSummary(watch_id) {
+  if (!watch_id || !supabase) return "";
+
+  const readings = await dbFetchReadings(watch_id);
+  const recent   = readings.slice(-30);
+  if (!recent.length) return "";
+
+  const hrValues   = recent.map((r) => Number(r.hr)).filter((n) => Number.isFinite(n));
+  const spo2Values = recent.map((r) => Number(r.spo2)).filter((n) => Number.isFinite(n));
+  if (!hrValues.length || !spo2Values.length) return "";
+
+  const latestHR   = Number(recent[recent.length - 1]?.hr)   || 0;
+  const latestSpO2 = Number(recent[recent.length - 1]?.spo2) || 0;
+
+  const avgHr   = hrValues.reduce((a, b) => a + b, 0)   / hrValues.length;
+  const avgSpo2 = spo2Values.reduce((a, b) => a + b, 0) / spo2Values.length;
+
+  const riskLevel = (latestHR > 110 || latestSpO2 < 92)
+    ? "Critical"
+    : (latestHR > 95 || latestSpO2 < 95 ? "Warning" : "Normal");
+
+  return `Patient Summary:
+
+* Latest HR: ${latestHR} bpm
+* Avg HR: ${avgHr.toFixed(1)} bpm
+* Trend: ${hrTrend(hrValues)}
+* Latest SpO2: ${latestSpO2} %
+* Avg SpO2: ${avgSpo2.toFixed(1)} %
+* Risk Level: ${riskLevel}`;
+}
+
 // ─── DB: Reminders ────────────────────────────────────────────────────────────
 // Table: reminders (id bigserial PK, watch_id text, medicine_name text, time text, repeat_days text, doctor_email text, created_at)
 
@@ -159,6 +201,14 @@ async function askGroq(question, contextText, role) {
     ? "You are a concise clinical assistant for doctors. Use only the provided patient data. Give practical guidance. Keep responses under 8 lines."
     : "You are a supportive health assistant for patients. Use simple language. Never diagnose. Advise contacting a doctor for severe values. Keep responses under 8 lines.";
 
+  const finalPrompt = `You are a medical assistant.
+
+Use the patient data below to answer.
+
+${contextText || "Not enough patient data available"}
+
+User Question: ${question}`;
+
   for (const model of [GROQ_MODEL, "llama-3.1-8b-instant"]) {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -169,7 +219,7 @@ async function askGroq(question, contextText, role) {
         max_tokens: 300,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Context:\n${contextText}\n\nQuestion:\n${question}` }
+          { role: "user", content: finalPrompt }
         ]
       })
     });
@@ -518,11 +568,17 @@ app.get("/patientReminders", requireSupabase, async (req, res) => {
 app.post("/aiChat", async (req, res) => {
   const role     = String(req.body.role     || "patient").trim().toLowerCase();
   const question = String(req.body.question || "").trim();
-  const context  = String(req.body.context  || "").trim();
+  const watch_id = String(req.body.watchID  || req.body.watch_id || "").trim().toUpperCase();
 
   if (!question) return res.status(400).json({ success: false, message: "question required" });
 
   try {
+    const context = await buildReadingSummary(watch_id);
+
+    if (!context) {
+      return res.json({ success: true, answer: "Not enough patient data available" });
+    }
+
     const answer = await askGroq(question, context, role === "doctor" ? "doctor" : "patient");
     return res.json({ success: true, answer });
   } catch (err) {
