@@ -33,6 +33,28 @@
       <div class="stats-grid" id="snapshotCards"></div>
     </section>
 
+    <section class="card mood-card">
+      <div class="mood-head">
+        <div>
+          <p class="pill">Calm zone</p>
+          <h2>Wellness vibes</h2>
+          <p class="subtle">Little reminders to keep you balanced.</p>
+        </div>
+        <div class="mood-badge">✨</div>
+      </div>
+      <div class="mood-grid">
+        <figure class="mood-tile" style="--img:url('https://images.unsplash.com/photo-1514996937319-344454492b37?auto=format&fit=crop&w=600&q=80')">
+          <figcaption>Breathe slow, count to 4</figcaption>
+        </figure>
+        <figure class="mood-tile" style="--img:url('https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=600&q=80')">
+          <figcaption>Light stretch every hour</figcaption>
+        </figure>
+        <figure class="mood-tile" style="--img:url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80')">
+          <figcaption>Stay hydrated, sip often</figcaption>
+        </figure>
+      </div>
+    </section>
+
     <section class="card">
       <h2>Vitals Trend</h2>
       <div class="chart-wrap">
@@ -57,11 +79,27 @@
 
     <section class="card">
       <h2>Health Assistant</h2>
-      <div class="chatbot">
-        <div id="chatLog" class="chat-log"></div>
-        <div class="chat-input-row">
-          <input id="chatInput" placeholder="Ask about your latest vitals, trends, or next steps…">
-          <button id="chatSendBtn" type="button">Send</button>
+      <div class="assistant-deck">
+        <div class="bot-visual" aria-hidden="true">
+          <div class="bot-ring"></div>
+          <div class="bot-core">
+            <div class="bot-face">
+              <img class="bot-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f916.svg" alt="Doctor bot">
+              <span class="bot-doc-badge">MD</span>
+            </div>
+            <div class="bot-pulse"></div>
+          </div>
+          <div class="floating-pill pill-1">Guided tips</div>
+          <div class="floating-pill pill-2">Vitals aware</div>
+          <div class="floating-pill pill-3">Friendly tone</div>
+        </div>
+
+        <div class="chatbot">
+          <div id="chatLog" class="chat-log"></div>
+          <div class="chat-input-row">
+            <input id="chatInput" placeholder="Ask about your latest vitals, trends, or next steps…">
+            <button id="chatSendBtn" type="button">Send</button>
+          </div>
         </div>
       </div>
     </section>
