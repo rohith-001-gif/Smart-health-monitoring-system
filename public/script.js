@@ -1,32 +1,28 @@
-const themeToggle = document.getElementById("themeToggle");
-
-themeToggle.addEventListener("click", () => {
-  document.body.classList.toggle("dark");
-});
 // ── Auth guard ────────────────────────────────────────────────────────────────
 const doctorEmail = localStorage.getItem("doctor");
 if (!doctorEmail) window.location.href = "login.html";
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
-const form             = document.getElementById("watchForm");
-const statusMsg        = document.getElementById("statusMsg");
-const watchesList      = document.getElementById("watchesList");
-const doctorEmailText  = document.getElementById("doctorEmailText");
-const submitBtn        = document.getElementById("submitBtn");
-const cancelEditBtn    = document.getElementById("cancelEditBtn");
-const formTitle        = document.getElementById("formTitle");
-const watchIDInput     = document.getElementById("watchID");
-const nameInput        = document.getElementById("name");
-const emailInput       = document.getElementById("email");
-const ageInput         = document.getElementById("age");
-const conditionInput   = document.getElementById("condition");
-const phoneInput       = document.getElementById("phone");
-const logoutBtn        = document.getElementById("logoutBtn");
-const notificationBtn  = document.getElementById("notificationBtn");
+const form              = document.getElementById("watchForm");
+const statusMsg         = document.getElementById("statusMsg");
+const watchesList       = document.getElementById("watchesList");
+const doctorEmailText   = document.getElementById("doctorEmailText");
+const submitBtn         = document.getElementById("submitBtn");
+const cancelEditBtn     = document.getElementById("cancelEditBtn");
+const formTitle         = document.getElementById("formTitle");
+const watchIDInput      = document.getElementById("watchID");
+const nameInput         = document.getElementById("name");
+const emailInput        = document.getElementById("email");
+const ageInput          = document.getElementById("age");
+const conditionInput    = document.getElementById("condition");
+const phoneInput        = document.getElementById("phone");
+const logoutBtn         = document.getElementById("logoutBtn");
+const notificationBtn   = document.getElementById("notificationBtn");
 const notificationBadge = document.getElementById("notificationBadge");
 const notificationPanel = document.getElementById("notificationPanel");
 const notificationList  = document.getElementById("notificationList");
 const hardwareEndpoint  = document.getElementById("hardwareEndpoint");
+const themeToggle       = document.getElementById("themeToggle");
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let editingWatchID = null;
@@ -34,8 +30,18 @@ let latestWatches  = [];
 const remindersCache = {};
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-doctorEmailText.textContent = "Signed in doctor: " + doctorEmail;
-if (hardwareEndpoint) hardwareEndpoint.textContent = window.location.origin + "/update?watchID=WCH001&hr=75&spo2=98&steps=100";
+doctorEmailText.textContent = "Signed in as " + doctorEmail;
+if (hardwareEndpoint) {
+  hardwareEndpoint.textContent = window.location.origin + "/update?watchID=WCH001&hr=75&spo2=98&steps=100";
+}
+
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+let darkMode = false;
+themeToggle.addEventListener("click", () => {
+  darkMode = !darkMode;
+  document.body.classList.toggle("dark", darkMode);
+  themeToggle.textContent = darkMode ? "☀️" : "🌙";
+});
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 logoutBtn.addEventListener("click", () => {
@@ -44,14 +50,15 @@ logoutBtn.addEventListener("click", () => {
 });
 
 // ── Notifications toggle ──────────────────────────────────────────────────────
-notificationBtn.addEventListener("click", () => {
-  notificationPanel.hidden = !notificationPanel.hidden;
+// FIX: use CSS class 'open' instead of 'hidden' attribute to allow CSS transitions
+notificationBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  notificationPanel.classList.toggle("open");
 });
+
 document.addEventListener("click", (e) => {
-  if (!notificationPanel.hidden
-    && !notificationPanel.contains(e.target)
-    && !notificationBtn.contains(e.target)) {
-    notificationPanel.hidden = true;
+  if (!notificationPanel.contains(e.target) && !notificationBtn.contains(e.target)) {
+    notificationPanel.classList.remove("open");
   }
 });
 
@@ -72,8 +79,14 @@ form.addEventListener("submit", async (e) => {
 
   if (!payload.watchID || !payload.name || !payload.email) {
     statusMsg.textContent = "Please fill Watch ID, Patient Name and Email.";
+    statusMsg.style.color = "var(--rose)";
     return;
   }
+
+  // FIX: disable button to prevent double-submit
+  submitBtn.disabled = true;
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = "Saving…";
 
   const endpoint = editingWatchID ? "/updatePatient" : "/addPatient";
   const method   = editingWatchID ? "PUT" : "POST";
@@ -89,46 +102,56 @@ form.addEventListener("submit", async (e) => {
 
     if (!res.ok || !result.success) {
       statusMsg.textContent = result.message || "Unable to save.";
+      statusMsg.style.color = "var(--rose)";
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
       return;
     }
 
     statusMsg.textContent = result.message;
+    statusMsg.style.color = "var(--green)";
     resetEditMode();
     await loadDoctorWatches();
     await loadNotifications();
-  } catch (err) {
+  } catch {
     statusMsg.textContent = "Server error. Please try again.";
+    statusMsg.style.color = "var(--rose)";
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 });
 
 cancelEditBtn.addEventListener("click", () => {
   resetEditMode();
   statusMsg.textContent = "Edit cancelled.";
+  statusMsg.style.color = "var(--muted)";
 });
 
 // ── Edit helpers ──────────────────────────────────────────────────────────────
 function resetEditMode() {
-  editingWatchID = null;
+  editingWatchID        = null;
   form.reset();
-  watchIDInput.disabled  = false;
-  submitBtn.textContent  = "Add Watch Link";
-  formTitle.textContent  = "Add Watch and Link Patient";
-  cancelEditBtn.hidden   = true;
+  watchIDInput.disabled = false;
+  submitBtn.textContent = "Add Watch Link";
+  formTitle.textContent = "Add Watch & Link Patient";
+  cancelEditBtn.style.display = "none";
 }
 
 function startEdit(watch) {
-  editingWatchID         = watch.watchID;
-  watchIDInput.value     = watch.watchID;
-  watchIDInput.disabled  = true;
-  nameInput.value        = watch.name      === "-" ? "" : watch.name;
-  emailInput.value       = watch.email     === "-" ? "" : watch.email;
-  ageInput.value         = watch.age       === "-" ? "" : watch.age;
-  conditionInput.value   = watch.condition === "-" ? "" : watch.condition;
-  phoneInput.value       = watch.phone     === "-" ? "" : watch.phone;
-  submitBtn.textContent  = "Update Patient";
-  formTitle.textContent  = "Edit Linked Patient";
-  cancelEditBtn.hidden   = false;
-  statusMsg.textContent  = "Editing watch: " + watch.watchID;
+  editingWatchID              = watch.watchID;
+  watchIDInput.value          = watch.watchID;
+  watchIDInput.disabled       = true;
+  nameInput.value             = watch.name      === "-" ? "" : watch.name;
+  emailInput.value            = watch.email     === "-" ? "" : watch.email;
+  ageInput.value              = watch.age       === "-" ? "" : watch.age;
+  conditionInput.value        = watch.condition === "-" ? "" : watch.condition;
+  phoneInput.value            = watch.phone     === "-" ? "" : watch.phone;
+  submitBtn.textContent       = "Update Patient";
+  formTitle.textContent       = "Edit Linked Patient";
+  cancelEditBtn.style.display = "inline-flex";
+  statusMsg.textContent       = "Editing watch: " + watch.watchID;
+  statusMsg.style.color       = "var(--amber)";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -166,7 +189,7 @@ function renderReminderList(listEl, reminders) {
 function buildReminderForm(watchID, listEl, statusEl) {
   const frm = document.createElement("form");
   frm.className = "reminder-form";
-  frm.innerHTML  = `
+  frm.innerHTML = `
     <input name="medicine" placeholder="Medicine Name" required>
     <input name="time" type="time" required>
     <div class="repeat-days">
@@ -179,34 +202,35 @@ function buildReminderForm(watchID, listEl, statusEl) {
       <label><input type="checkbox" value="Sun"> Sun</label>
     </div>
     <div class="reminder-actions">
-      <button type="submit">Save</button>
+      <button type="submit">Save Reminder</button>
       <button type="button" class="secondary-btn rem-cancel">Close</button>
     </div>`;
 
-  frm.querySelector(".rem-cancel").addEventListener("click", () => { frm.hidden = true; });
+  frm.querySelector(".rem-cancel").addEventListener("click", () => { frm.style.display = "none"; });
 
   frm.addEventListener("submit", async (e) => {
     e.preventDefault();
     statusEl.textContent = "";
 
-    const selectedDays = Array.from(
-  frm.querySelectorAll("input[type='checkbox']:checked")
-)
-  .map(cb => cb.value)
-  .join(",");
+    const selectedDays = Array.from(frm.querySelectorAll("input[type='checkbox']:checked"))
+      .map(cb => cb.value).join(",");
 
-const payload = {
-  watch_id: watchID,
-  medicine_name: frm.medicine.value.trim(),
-  time: frm.time.value.trim(),
-  repeat_days: selectedDays,
-  doctor_email: doctorEmail
-};
+    const payload = {
+      watch_id:      watchID,
+      medicine_name: frm.medicine.value.trim(),
+      time:          frm.time.value.trim(),
+      repeat_days:   selectedDays,
+      doctor_email:  doctorEmail
+    };
 
     if (!payload.medicine_name || !payload.time || !payload.repeat_days) {
       statusEl.textContent = "All fields are required.";
       return;
     }
+
+    const saveBtn = frm.querySelector("button[type=submit]");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving…";
 
     try {
       const res    = await fetch("/addReminder", {
@@ -224,34 +248,40 @@ const payload = {
       renderReminderList(listEl, await fetchRemindersForWatch(watchID));
     } catch {
       statusEl.textContent = "Server error.";
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save Reminder";
     }
   });
 
-  frm.hidden = true;
+  frm.style.display = "none";
   return frm;
 }
 
 function createReminderCell(watch) {
-  const cell = document.createElement("td");
+  const cell    = document.createElement("td");
   cell.className = "reminders-cell";
 
-  const header = document.createElement("div");
+  const header   = document.createElement("div");
   header.className = "reminder-head";
-  const title  = document.createElement("strong");
+  const title    = document.createElement("strong");
   title.textContent = "Reminders";
+  title.style.fontSize = "12px";
+  title.style.color = "var(--muted)";
   header.appendChild(title);
 
-  const list    = document.createElement("ul");
-  list.className = "reminder-list";
+  const list     = document.createElement("ul");
+  list.className  = "reminder-list";
 
   const statusEl = document.createElement("p");
   statusEl.className = "reminder-status";
 
-  const frm       = buildReminderForm(watch.watchID, list, statusEl);
+  const frm      = buildReminderForm(watch.watchID, list, statusEl);
 
   const toggleForm = async () => {
-    frm.hidden = !frm.hidden;
-    if (!frm.hidden) renderReminderList(list, await fetchRemindersForWatch(watch.watchID));
+    const isHidden = frm.style.display === "none" || frm.style.display === "";
+    frm.style.display = isHidden ? "flex" : "none";
+    if (isHidden) renderReminderList(list, await fetchRemindersForWatch(watch.watchID));
   };
 
   cell.appendChild(header);
@@ -269,10 +299,10 @@ function connLabel(readings) {
   if (!Array.isArray(readings) || !readings.length) return { text: "Not connected", cls: "conn-offline" };
   const latest = readings[readings.length - 1];
   const ageMs  = Date.now() - new Date(latest.time).getTime();
-  if (isNaN(ageMs))     return { text: "Unknown",       cls: "conn-offline" };
-  if (ageMs <= 75000)   return { text: "Live",           cls: "conn-live"    };
-  if (ageMs <= 300000)  return { text: "Idle",           cls: "conn-idle"    };
-  return                       { text: "Offline",        cls: "conn-offline" };
+  if (isNaN(ageMs))    return { text: "Unknown", cls: "conn-offline" };
+  if (ageMs <= 75000)  return { text: "Live",    cls: "conn-live" };
+  if (ageMs <= 300000) return { text: "Idle",    cls: "conn-idle" };
+  return                      { text: "Offline", cls: "conn-offline" };
 }
 
 async function updateConnectivity(watches) {
@@ -321,7 +351,7 @@ async function loadDoctorWatches() {
     const table = document.createElement("table");
     table.className = "watches-table";
     table.innerHTML = `<thead><tr>
-      <th>Watch ID</th><th>Device</th><th>Patient</th><th>Email</th>
+      <th>Watch ID</th><th>Status</th><th>Patient</th><th>Email</th>
       <th>Age</th><th>Condition</th><th>Phone</th><th>Reminders</th><th>Actions</th>
     </tr></thead>`;
 
@@ -380,14 +410,14 @@ async function loadDoctorWatches() {
 // ── Notifications ─────────────────────────────────────────────────────────────
 function renderNotifications(notifications) {
   if (!notifications.length) {
-    notificationList.innerHTML  = "<li class='notif-empty'>No critical alerts right now.</li>";
-    notificationBadge.hidden    = true;
+    notificationList.innerHTML    = "<li class='notif-empty'>No critical alerts right now. ✓</li>";
+    notificationBadge.style.display = "none";
     return;
   }
 
-  notificationBadge.hidden     = false;
-  notificationBadge.textContent = notifications.length;
-  notificationList.innerHTML    = "";
+  notificationBadge.style.display = "inline-flex";
+  notificationBadge.textContent    = notifications.length;
+  notificationList.innerHTML       = "";
 
   notifications.forEach((item) => {
     const li = document.createElement("li");
@@ -412,11 +442,5 @@ async function loadNotifications() {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 loadDoctorWatches();
 loadNotifications();
-setInterval(loadNotifications, 15000);
+setInterval(loadNotifications,  15000);
 setInterval(() => { if (latestWatches.length) updateConnectivity(latestWatches); }, 20000);
-
-const beep = new Audio("https://www.soundjay.com/buttons/beep-01a.mp3");
-
-function triggerAlert() {
-  beep.play();
-}
