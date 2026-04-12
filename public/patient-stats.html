@@ -5,6 +5,149 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Patient Stats – Arogya</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Risk meter */
+    .risk-meter-wrap {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      padding: 20px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .risk-arc {
+      flex-shrink: 0;
+    }
+    .risk-info h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .risk-info p { font-size: 13px; color: var(--muted); }
+    .risk-low h3 { color: var(--green); }
+    .risk-medium h3 { color: var(--amber); }
+    .risk-high h3 { color: var(--rose); }
+
+    /* Patient photo header area */
+    .patient-hero {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-top: 18px;
+      min-height: 140px;
+      display: flex;
+      align-items: center;
+      padding: 28px 32px;
+      gap: 24px;
+      background: rgba(8,14,38,0.94);
+      border: 1px solid var(--border);
+    }
+    .patient-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1400&q=80") center/cover;
+      opacity: 0.07;
+    }
+    .patient-hero-content {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+    }
+    .patient-hero h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(125deg, #f0f4ff 30%, var(--teal) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 6px;
+    }
+    .patient-hero .meta-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .meta-tag {
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-hi);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+    .patient-hero-icon {
+      position: relative;
+      z-index: 1;
+      font-size: 64px;
+      animation: floatB 6s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    /* timeline mini display */
+    .timeline-strip {
+      display: flex;
+      gap: 4px;
+      margin-top: 12px;
+      height: 28px;
+      align-items: flex-end;
+    }
+    .timeline-bar {
+      flex: 1;
+      border-radius: 3px;
+      background: rgba(14,242,208,0.15);
+      border-top: 2px solid rgba(14,242,208,0.4);
+      transition: height 0.3s ease;
+      min-height: 4px;
+    }
+    .timeline-bar.bad {
+      background: rgba(255,107,138,0.2);
+      border-top-color: rgba(255,107,138,0.6);
+    }
+
+    /* care plan section */
+    .care-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .care-step {
+      padding: 16px 18px;
+      background: rgba(14,242,208,0.04);
+      border: 1px solid rgba(14,242,208,0.12);
+      border-radius: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      transition: all 0.25s;
+    }
+    .care-step:hover {
+      background: rgba(14,242,208,0.07);
+      border-color: rgba(14,242,208,0.22);
+      transform: translateY(-1px);
+    }
+    .care-step-num {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      color: #030814;
+      font-size: 12px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-family: 'DM Mono', monospace;
+    }
+    .care-step-text { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .care-step-text strong { display: block; color: var(--text); font-size: 14px; margin-bottom: 2px; }
+  </style>
 </head>
 <body class="doctor-theme">
   <div class="lux-bg" aria-hidden="true">
@@ -17,11 +160,23 @@
   <div class="page-shell">
     <header class="stats-header">
       <div>
-        <h1 id="pageTitle">Patient Statistics</h1>
+        <h1 id="pageTitle">📊 Patient Statistics</h1>
         <p class="subtle" id="watchInfo">Loading…</p>
       </div>
       <button id="backBtn" class="secondary-btn" type="button">← Back to Dashboard</button>
     </header>
+
+    <!-- Patient hero banner -->
+    <div class="patient-hero">
+      <div class="patient-hero-content">
+        <h2 id="patientHeroName">Patient Overview</h2>
+        <div class="meta-tags" id="patientMetaTags">
+          <span class="meta-tag">Loading…</span>
+        </div>
+        <div class="timeline-strip" id="timelineStrip"></div>
+      </div>
+      <div class="patient-hero-icon">🏥</div>
+    </div>
 
     <section class="card">
       <h2>Patient Details</h2>
@@ -30,6 +185,17 @@
 
     <section class="card">
       <h2>Vitals Snapshot</h2>
+      <div id="riskMeter" class="risk-meter-wrap" style="display:none">
+        <svg class="risk-arc" width="100" height="60" viewBox="0 0 100 60">
+          <path d="M10,55 A40,40 0 0,1 90,55" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10" stroke-linecap="round"/>
+          <path id="riskArcFill" d="M10,55 A40,40 0 0,1 90,55" fill="none" stroke="#0ef2d0" stroke-width="10" stroke-linecap="round" stroke-dasharray="125" stroke-dashoffset="125" style="transition: stroke-dashoffset 1s ease, stroke 0.5s"/>
+          <text x="50" y="52" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="11" font-family="DM Mono,monospace" font-weight="600" id="riskArcLabel">—</text>
+        </svg>
+        <div class="risk-info" id="riskInfoBox">
+          <h3 id="riskLevel">Computing…</h3>
+          <p id="riskDesc">Analyzing patient data…</p>
+        </div>
+      </div>
       <div class="stats-grid" id="snapshotCards"></div>
     </section>
 
@@ -40,7 +206,7 @@
           <label>Metric
             <select id="metricSelect">
               <option value="hr">Heart Rate</option>
-              <option value="spo2">SpO2</option>
+              <option value="spo2">SpO₂</option>
               <option value="steps">Steps</option>
             </select>
           </label>
@@ -50,18 +216,101 @@
       </div>
     </section>
 
+    <!-- Care plan quick view -->
     <section class="card">
-      <h2>Care Assistant</h2>
+      <h2>📋 Quick Care Plan</h2>
+      <div class="care-steps">
+        <div class="care-step">
+          <div class="care-step-num">01</div>
+          <div class="care-step-text">
+            <strong>Verify Vitals</strong>
+            Cross-check latest HR and SpO₂ against baselines
+          </div>
+        </div>
+        <div class="care-step">
+          <div class="care-step-num">02</div>
+          <div class="care-step-text">
+            <strong>Medication Check</strong>
+            Confirm adherence to prescribed medication schedule
+          </div>
+        </div>
+        <div class="care-step">
+          <div class="care-step-num">03</div>
+          <div class="care-step-text">
+            <strong>Trend Analysis</strong>
+            Review 30-reading trend for anomalies or patterns
+          </div>
+        </div>
+        <div class="care-step">
+          <div class="care-step-num">04</div>
+          <div class="care-step-text">
+            <strong>Follow-up Action</strong>
+            Escalate if ≥5 critical entries in current session
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>🤖 Care Assistant</h2>
       <div class="chatbot">
         <div id="chatLog" class="chat-log"></div>
         <div class="chat-input-row">
           <input id="chatInput" placeholder="Ask: latest vitals, risk, summary, next steps…">
-          <button id="chatSendBtn" type="button">Send</button>
+          <button id="chatSendBtn" type="button">Send →</button>
         </div>
       </div>
     </section>
   </div>
 
+  <script>
+    // Hook to update hero after data loads
+    window.__updatePatientHero = function(profile, readings, risk) {
+      const nameEl = document.getElementById('patientHeroName');
+      const tagsEl = document.getElementById('patientMetaTags');
+      const strip  = document.getElementById('timelineStrip');
+      const riskMeter = document.getElementById('riskMeter');
+      const arcFill = document.getElementById('riskArcFill');
+      const arcLabel = document.getElementById('riskArcLabel');
+      const riskLevel = document.getElementById('riskLevel');
+      const riskDesc = document.getElementById('riskDesc');
+      const riskBox = document.getElementById('riskInfoBox');
+
+      if (nameEl && profile.name) nameEl.textContent = profile.name;
+      if (tagsEl && profile) {
+        tagsEl.innerHTML = [
+          profile.age ? `<span class="meta-tag">Age: ${profile.age}</span>` : '',
+          profile.condition ? `<span class="meta-tag">${profile.condition}</span>` : '',
+          profile.watchID ? `<span class="meta-tag">📡 ${profile.watchID}</span>` : ''
+        ].filter(Boolean).join('');
+      }
+
+      // Timeline bars
+      if (strip && readings && readings.length) {
+        strip.innerHTML = '';
+        const last20 = readings.slice(-20);
+        const maxHR = Math.max(...last20.map(r => Number(r.hr) || 0)) || 1;
+        last20.forEach(r => {
+          const bar = document.createElement('div');
+          bar.className = 'timeline-bar' + (Number(r.hr) > 120 || Number(r.spo2) < 90 ? ' bad' : '');
+          bar.style.height = ((Number(r.hr) || 0) / maxHR * 24 + 4) + 'px';
+          strip.appendChild(bar);
+        });
+      }
+
+      // Risk meter
+      if (riskMeter) {
+        riskMeter.style.display = 'flex';
+        const riskMap = { Low: { color: '#0ef2a0', offset: 40, label: 'Low Risk' }, Medium: { color: '#ffd060', offset: 80, label: 'Medium Risk' }, High: { color: '#ff6b8a', offset: 125, label: 'High Risk' } };
+        const rm = riskMap[risk] || riskMap.Low;
+        if (arcFill) { arcFill.style.stroke = rm.color; arcFill.style.strokeDashoffset = 125 - rm.offset; }
+        if (arcLabel) arcLabel.textContent = risk || '—';
+        if (riskLevel) { riskLevel.textContent = rm.label; riskBox.className = 'risk-info risk-' + (risk || 'low').toLowerCase(); }
+        const descs = { Low: 'Patient vitals within acceptable range.', Medium: 'Some elevated readings detected. Monitor closely.', High: 'Multiple critical events detected. Immediate review recommended.' };
+        if (riskDesc) riskDesc.textContent = descs[risk] || '';
+      }
+    };
+  </script>
   <script src="patient-stats.js"></script>
 </body>
 </html>

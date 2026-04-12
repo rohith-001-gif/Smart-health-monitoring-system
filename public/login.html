@@ -7,68 +7,95 @@
   <link rel="stylesheet" href="login.css">
 </head>
 <body>
-  <div class="bg-scene" aria-hidden="true">
-    <div class="bg-base"></div>
-    <span class="orb orb-a"></span>
-    <span class="orb orb-b"></span>
-    <span class="orb orb-c"></span>
-    <span class="grid-glow"></span>
-    <div class="bg-noise"></div>
+
+  <canvas id="bgCanvas"></canvas>
+  <div class="bg-overlay"></div>
+  <div class="bg-noise"></div>
+
+  <!-- ECG decorative line at bottom -->
+  <div class="ecg-line">
+    <svg viewBox="0 0 1200 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <polyline fill="none" stroke="#0ef2d0" stroke-width="1.5"
+        points="0,40 60,40 90,40 110,10 130,70 150,5 170,70 190,40 260,40 320,40 350,40 370,15 390,65 410,8 430,65 450,40 520,40 580,40 610,40 630,15 650,65 670,8 690,65 710,40 780,40 840,40 870,40 890,15 910,65 930,8 950,65 970,40 1040,40 1100,40 1130,40 1150,15 1170,65 1190,8 1210,65 1230,40 1200,40"/>
+    </svg>
   </div>
 
   <main class="login-shell">
     <section class="brand-panel">
-      <p class="eyebrow">Arogya Health System</p>
-      <h1>Real-time care intelligence</h1>
-      <p class="intro">Monitor patient vitals, detect critical events instantly, and coordinate care — all through one connected platform powered by wearable intelligence.</p>
+      <p class="eyebrow"><span class="eyebrow-dot"></span>Arogya Health Intelligence</p>
+      <h1>Real-time care,<br>redefined.</h1>
+      <p class="intro">Monitor patient vitals, detect critical events in under a second, and coordinate care — powered by wearable IoT intelligence.</p>
 
       <ul class="feature-list">
-        <li>Live SpO₂ &amp; heart rate from ESP32 watches</li>
-        <li>Instant critical alerts &amp; email notifications</li>
-        <li>Doctor &amp; patient portals with AI assistant</li>
-        <li>Medication reminders &amp; trend analytics</li>
+        <li>
+          <span class="feat-icon">🫀</span>
+          Live SpO₂ &amp; heart rate from ESP32 watches
+        </li>
+        <li>
+          <span class="feat-icon">🚨</span>
+          Instant critical alerts &amp; email notifications
+        </li>
+        <li>
+          <span class="feat-icon">🤖</span>
+          Doctor &amp; patient portals with AI assistant
+        </li>
+        <li>
+          <span class="feat-icon">💊</span>
+          Medication reminders &amp; trend analytics
+        </li>
       </ul>
 
-      <div class="brand-divider"></div>
-
-      <div class="brand-stat-row">
-        <div class="brand-stat">
+      <div class="stats-row">
+        <div class="stat-item">
           <span>24/7</span>
           <small>Monitoring</small>
         </div>
-        <div class="brand-stat">
+        <div class="stat-item">
           <span>&lt;1s</span>
           <small>Alert latency</small>
         </div>
-        <div class="brand-stat">
+        <div class="stat-item">
           <span>IoT</span>
           <small>Powered</small>
         </div>
+      </div>
+
+      <div class="heartbeat-bar">
+        <svg viewBox="0 0 1200 32" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <polyline fill="none" stroke="#0ef2d0" stroke-width="1.2"
+            points="0,16 80,16 100,16 115,4 125,28 135,2 145,28 155,16 220,16 300,16 315,16 330,6 340,26 350,2 360,26 370,16 440,16 520,16 535,16 550,6 560,26 570,2 580,26 590,16 660,16 740,16 755,16 770,6 780,26 790,2 800,26 810,16 880,16 960,16 975,16 990,6 1000,26 1010,2 1020,26 1030,16 1100,16 1200,16"/>
+        </svg>
       </div>
     </section>
 
     <section class="card-panel">
       <div class="login-card">
+        <div class="scan-line"></div>
+
         <div class="card-header">
+          <div class="card-logo">
+            <div class="logo-pulse">🏥</div>
+            <span class="logo-name">Arogya</span>
+          </div>
           <h2>Welcome back</h2>
           <p>Sign in to your dashboard</p>
         </div>
 
         <div class="tabs" role="tablist" aria-label="Login type">
-          <button id="doctorTab" class="tab active" role="tab" aria-selected="true" type="button">Doctor</button>
-          <button id="patientTab" class="tab" role="tab" aria-selected="false" type="button">Patient</button>
+          <button id="doctorTab" class="tab active" role="tab" aria-selected="true" type="button">👨‍⚕️ Doctor</button>
+          <button id="patientTab" class="tab" role="tab" aria-selected="false" type="button">🧑‍💼 Patient</button>
         </div>
 
         <form id="doctorForm" class="auth-form active" autocomplete="off">
           <div class="field-group">
-            <label for="doctorEmail">Email</label>
+            <label for="doctorEmail">Email Address</label>
             <input id="doctorEmail" type="email" placeholder="doctor@hospital.com" required>
           </div>
           <div class="field-group">
             <label for="doctorPass">Password</label>
             <input id="doctorPass" type="password" placeholder="••••••••" required>
           </div>
-          <button class="primary-btn" type="submit">Sign in as Doctor</button>
+          <button class="primary-btn" type="submit">Sign in as Doctor →</button>
         </form>
 
         <form id="patientForm" class="auth-form" autocomplete="off">
@@ -77,10 +104,10 @@
             <input id="patientWatchID" placeholder="e.g. WCH001" required>
           </div>
           <div class="field-group">
-            <label for="patientEmail">Email</label>
+            <label for="patientEmail">Email Address</label>
             <input id="patientEmail" type="email" placeholder="patient@email.com" required>
           </div>
-          <button class="primary-btn" type="submit">Sign in as Patient</button>
+          <button class="primary-btn" type="submit">Sign in as Patient →</button>
         </form>
 
         <p id="loginMessage" class="login-message"></p>
@@ -88,6 +115,76 @@
     </section>
   </main>
 
+  <script>
+    /* ── Canvas particle system ─────────────────────────────────────────── */
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, particles = [];
+
+    function resize() {
+      W = canvas.width  = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * W;
+        this.y = Math.random() * H;
+        this.r = Math.random() * 1.5 + 0.3;
+        this.vx = (Math.random() - 0.5) * 0.3;
+        this.vy = (Math.random() - 0.5) * 0.3;
+        this.alpha = Math.random() * 0.5 + 0.1;
+        this.color = Math.random() > 0.5 ? '#0ef2d0' : '#4f7cff';
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+      }
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.alpha;
+        ctx.fill();
+      }
+    }
+
+    for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+    /* connection lines between nearby particles */
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d = Math.sqrt(dx*dx + dy*dy);
+          if (d < 100) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = '#0ef2d0';
+            ctx.globalAlpha = (1 - d/100) * 0.08;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+      drawConnections();
+      particles.forEach(p => { p.update(); p.draw(); });
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
   <script src="login.js"></script>
 </body>
 </html>

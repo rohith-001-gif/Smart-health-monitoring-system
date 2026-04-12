@@ -5,8 +5,117 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Doctor Dashboard – Arogya</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Page-specific: floating vitals ticker at top */
+    .vitals-ticker {
+      background: rgba(8,14,38,0.9);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 0;
+      overflow: hidden;
+      position: relative;
+      backdrop-filter: blur(10px);
+    }
+    .ticker-track {
+      display: flex;
+      gap: 40px;
+      animation: tickerScroll 30s linear infinite;
+      white-space: nowrap;
+      width: max-content;
+    }
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .ticker-item .ticker-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 6px var(--teal);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+    .ticker-val { color: var(--teal); font-weight: 600; }
+    @keyframes tickerScroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* hero section above cards */
+    .hero-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 18px 0 4px;
+    }
+    .hero-stat {
+      padding: 20px 22px;
+      background: var(--surface-0);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      cursor: default;
+    }
+    .hero-stat:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-hi);
+      box-shadow: 0 14px 36px rgba(0,0,0,0.45), 0 0 30px rgba(14,242,208,0.06);
+    }
+    .hero-stat::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.5;
+    }
+    .hero-stat-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+    .hero-stat-icon.teal { background: rgba(14,242,208,0.1); border: 1px solid rgba(14,242,208,0.2); box-shadow: 0 0 16px rgba(14,242,208,0.08); }
+    .hero-stat-icon.blue { background: rgba(79,124,255,0.1); border: 1px solid rgba(79,124,255,0.2); box-shadow: 0 0 16px rgba(79,124,255,0.08); }
+    .hero-stat-icon.rose { background: rgba(255,107,138,0.1); border: 1px solid rgba(255,107,138,0.2); box-shadow: 0 0 16px rgba(255,107,138,0.08); }
+    .hero-stat-label { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em; font-family: 'DM Mono', monospace; margin-bottom: 6px; }
+    .hero-stat-val { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; }
+    .hero-stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* Animated data pulse on hero */
+    .hero-stat-canvas {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 120px; height: 50px;
+      opacity: 0.2;
+    }
+  </style>
 </head>
 <body class="doctor-theme">
+
+  <!-- Vitals ticker -->
+  <div class="vitals-ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span class="ticker-item"><span class="ticker-dot"></span> LIVE MONITORING <span class="ticker-val">ACTIVE</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> HR THRESHOLD <span class="ticker-val">&gt;120 BPM</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> SPO₂ THRESHOLD <span class="ticker-val">&lt;90%</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> ALERT LATENCY <span class="ticker-val">&lt;1s</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> SYSTEM STATUS <span class="ticker-val">OPERATIONAL</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> DATA REFRESH <span class="ticker-val">15s</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> LIVE MONITORING <span class="ticker-val">ACTIVE</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> HR THRESHOLD <span class="ticker-val">&gt;120 BPM</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> SPO₂ THRESHOLD <span class="ticker-val">&lt;90%</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> ALERT LATENCY <span class="ticker-val">&lt;1s</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> SYSTEM STATUS <span class="ticker-val">OPERATIONAL</span></span>
+      <span class="ticker-item"><span class="ticker-dot"></span> DATA REFRESH <span class="ticker-val">15s</span></span>
+    </div>
+  </div>
+
   <div class="lux-bg" aria-hidden="true">
     <span class="lux-orb orb-one"></span>
     <span class="lux-orb orb-two"></span>
@@ -17,13 +126,13 @@
   <div class="page-shell">
     <header class="dashboard-header">
       <div>
-        <h1>Doctor Dashboard</h1>
+        <h1>⚕️ Doctor Dashboard</h1>
         <p id="doctorEmailText">Signed in as –</p>
       </div>
       <div class="header-actions">
         <div class="notification-wrap">
           <button id="notificationBtn" class="notification-btn" type="button" aria-label="Notifications">
-            <span class="bell">&#128276;</span>
+            <span class="bell">🔔</span>
             <span id="notificationBadge" class="notification-badge" style="display:none">0</span>
           </button>
           <div id="notificationPanel" class="notification-panel">
@@ -31,14 +140,36 @@
             <ul id="notificationList" class="notification-list"></ul>
           </div>
         </div>
-        <button id="logoutBtn" class="secondary-btn" type="button">Logout</button>
+        <button id="logoutBtn" class="secondary-btn" type="button">↩ Logout</button>
         <button id="themeToggle" title="Toggle theme">🌙</button>
       </div>
     </header>
 
+    <!-- Hero stats -->
+    <div class="hero-strip">
+      <div class="hero-stat">
+        <div class="hero-stat-icon teal">🫀</div>
+        <div class="hero-stat-label">Patients Monitored</div>
+        <div class="hero-stat-val" id="heroPatients">—</div>
+        <div class="hero-stat-sub">Linked watches active</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-icon blue">📡</div>
+        <div class="hero-stat-label">Live Connections</div>
+        <div class="hero-stat-val" id="heroLive">—</div>
+        <div class="hero-stat-sub">Real-time data streaming</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-icon rose">🚨</div>
+        <div class="hero-stat-label">Critical Alerts</div>
+        <div class="hero-stat-val" id="heroCritical">—</div>
+        <div class="hero-stat-sub">Needs attention</div>
+      </div>
+    </div>
+
     <section class="card">
-      <h2 id="formTitle">Add Watch &amp; Link Patient</h2>
-      <p class="subtle" style="margin-bottom:12px">
+      <h2>Add Watch &amp; Link Patient</h2>
+      <p class="subtle" style="margin-bottom:14px">
         Hardware endpoint:&nbsp;
         <strong id="hardwareEndpoint">–</strong>
       </p>
@@ -52,19 +183,33 @@
           <input id="phone"     placeholder="Phone">
         </div>
         <div class="form-actions">
-          <button id="submitBtn" type="submit">Add Watch Link</button>
-          <button id="cancelEditBtn" class="secondary-btn" type="button" style="display:none">Cancel Edit</button>
+          <button id="submitBtn" type="submit">＋ Add Watch Link</button>
+          <button id="cancelEditBtn" class="secondary-btn" type="button" style="display:none">✕ Cancel Edit</button>
         </div>
       </form>
       <p id="statusMsg" class="status-msg"></p>
     </section>
 
     <section class="card">
-      <h2>Linked Watches</h2>
+      <h2 id="formTitle">Linked Watches</h2>
       <div id="watchesList"><p class="subtle">Loading…</p></div>
     </section>
   </div>
 
+  <script>
+    // Update hero stats after watches load
+    window.__updateHeroStats = function(watches, criticalCount) {
+      const hp = document.getElementById('heroPatients');
+      const hl = document.getElementById('heroLive');
+      const hc = document.getElementById('heroCritical');
+      if (hp) hp.textContent = watches.length;
+      if (hc) hc.textContent = criticalCount;
+    };
+    window.__updateHeroLive = function(liveCount) {
+      const hl = document.getElementById('heroLive');
+      if (hl) hl.textContent = liveCount;
+    };
+  </script>
   <script src="script.js"></script>
 </body>
 </html>

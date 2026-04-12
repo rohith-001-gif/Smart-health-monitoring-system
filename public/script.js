@@ -50,7 +50,6 @@ logoutBtn.addEventListener("click", () => {
 });
 
 // ── Notifications toggle ──────────────────────────────────────────────────────
-// FIX: use CSS class 'open' instead of 'hidden' attribute to allow CSS transitions
 notificationBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   notificationPanel.classList.toggle("open");
@@ -83,7 +82,6 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  // FIX: disable button to prevent double-submit
   submitBtn.disabled = true;
   const originalText = submitBtn.textContent;
   submitBtn.textContent = "Saving…";
@@ -133,7 +131,7 @@ function resetEditMode() {
   editingWatchID        = null;
   form.reset();
   watchIDInput.disabled = false;
-  submitBtn.textContent = "Add Watch Link";
+  submitBtn.textContent = "＋ Add Watch Link";
   formTitle.textContent = "Add Watch & Link Patient";
   cancelEditBtn.style.display = "none";
 }
@@ -147,7 +145,7 @@ function startEdit(watch) {
   ageInput.value              = watch.age       === "-" ? "" : watch.age;
   conditionInput.value        = watch.condition === "-" ? "" : watch.condition;
   phoneInput.value            = watch.phone     === "-" ? "" : watch.phone;
-  submitBtn.textContent       = "Update Patient";
+  submitBtn.textContent       = "✓ Update Patient";
   formTitle.textContent       = "Edit Linked Patient";
   cancelEditBtn.style.display = "inline-flex";
   statusMsg.textContent       = "Editing watch: " + watch.watchID;
@@ -210,27 +208,17 @@ function buildReminderForm(watchID, listEl, statusEl) {
 
   frm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    statusEl.textContent = "";
-
-    const selectedDays = Array.from(frm.querySelectorAll("input[type='checkbox']:checked"))
-      .map(cb => cb.value).join(",");
-
-    const payload = {
-      watch_id:      watchID,
-      medicine_name: frm.medicine.value.trim(),
-      time:          frm.time.value.trim(),
-      repeat_days:   selectedDays,
-      doctor_email:  doctorEmail
-    };
-
-    if (!payload.medicine_name || !payload.time || !payload.repeat_days) {
-      statusEl.textContent = "All fields are required.";
-      return;
-    }
-
     const saveBtn = frm.querySelector("button[type=submit]");
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving…";
+
+    const days = Array.from(frm.querySelectorAll(".repeat-days input:checked")).map(cb => cb.value);
+    const payload = {
+      watch_id:      watchID,
+      medicine_name: frm.querySelector("[name=medicine]").value.trim(),
+      time:          frm.querySelector("[name=time]").value,
+      repeat_days:   days.join(",")
+    };
 
     try {
       const res    = await fetch("/addReminder", {
@@ -321,13 +309,19 @@ async function updateConnectivity(watches) {
   );
 
   const map = {};
-  results.forEach(({ watchID, readings }) => { map[watchID] = connLabel(readings); });
+  let liveCount = 0;
+  results.forEach(({ watchID, readings }) => {
+    map[watchID] = connLabel(readings);
+    if (map[watchID].cls === "conn-live") liveCount++;
+  });
 
   cells.forEach((cell) => {
     const { text, cls } = map[cell.dataset.connWatch] || { text: "Unknown", cls: "conn-offline" };
     cell.textContent = text;
     cell.className   = "conn-pill " + cls;
   });
+
+  if (window.__updateHeroLive) window.__updateHeroLive(liveCount);
 }
 
 // ── Load doctor's watches ─────────────────────────────────────────────────────
@@ -342,6 +336,11 @@ async function loadDoctorWatches() {
     }
 
     latestWatches = result.watches;
+
+    // Update hero stats
+    if (window.__updateHeroStats) {
+      window.__updateHeroStats(result.watches, 0);
+    }
 
     if (!result.watches.length) {
       watchesList.innerHTML = "<p class='subtle'>No watches linked yet. Add one above.</p>";
@@ -381,9 +380,9 @@ async function loadDoctorWatches() {
         return b;
       };
 
-      actionTd.appendChild(mkBtn("Edit",       "secondary-btn", () => startEdit(watch)));
-      actionTd.appendChild(mkBtn("View Stats", "stats-btn",     () => openStats(watch.watchID)));
-      actionTd.appendChild(mkBtn("Reminders",  "secondary-btn", reminderObj.toggleForm));
+      actionTd.appendChild(mkBtn("✏️ Edit",       "secondary-btn", () => startEdit(watch)));
+      actionTd.appendChild(mkBtn("📊 Stats",      "stats-btn",     () => openStats(watch.watchID)));
+      actionTd.appendChild(mkBtn("💊 Reminders",  "secondary-btn", reminderObj.toggleForm));
 
       row.appendChild(mkTd(watch.watchID));
       row.appendChild(deviceTd);
@@ -412,12 +411,18 @@ function renderNotifications(notifications) {
   if (!notifications.length) {
     notificationList.innerHTML    = "<li class='notif-empty'>No critical alerts right now. ✓</li>";
     notificationBadge.style.display = "none";
+
+    // Update hero critical count
+    if (window.__updateHeroStats) window.__updateHeroStats(latestWatches, 0);
     return;
   }
 
   notificationBadge.style.display = "inline-flex";
   notificationBadge.textContent    = notifications.length;
   notificationList.innerHTML       = "";
+
+  // Update hero critical count
+  if (window.__updateHeroStats) window.__updateHeroStats(latestWatches, notifications.length);
 
   notifications.forEach((item) => {
     const li = document.createElement("li");

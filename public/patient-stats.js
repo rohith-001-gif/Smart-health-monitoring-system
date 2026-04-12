@@ -116,12 +116,12 @@ function renderSnapshot(latest, readings) {
   });
 }
 
-// ── Render: chart (FIX: no hardcoded dasharray, area gradient) ────────────────
+// ── Render: chart ─────────────────────────────────────────────────────────────
 function renderChart(readings, metric) {
   const last30 = readings.slice(-30);
 
   if (!last30.length) {
-    lineChart.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#64748b" font-size="15" font-family="Outfit,sans-serif">No data yet</text>`;
+    lineChart.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#4d5a8a" font-size="15" font-family="DM Sans,sans-serif">No data yet</text>`;
     return;
   }
 
@@ -142,28 +142,32 @@ function renderChart(readings, metric) {
   const areaPath = `M${pts[0][0]},${H} ` + pts.map(p => `L${p[0]},${p[1]}`).join(" ") + ` L${pts[pts.length-1][0]},${H} Z`;
 
   const colors = {
-    hr:    { stroke: "#fb7185", fill: "rgba(251,113,133,0.08)" },
-    spo2:  { stroke: "#3b82f6", fill: "rgba(59,130,246,0.08)" },
-    steps: { stroke: "#34d399", fill: "rgba(52,211,153,0.08)" }
+    hr:    { stroke: "#ff6b8a", fill: "rgba(255,107,138,0.08)" },
+    spo2:  { stroke: "#4f7cff", fill: "rgba(79,124,255,0.08)" },
+    steps: { stroke: "#0ef2a0", fill: "rgba(14,242,160,0.08)" }
   };
   const c = colors[metric] || colors.hr;
 
   const dotsHTML = pts.map(([x, y], i) =>
-    `<circle cx="${x}" cy="${y}" r="${i === pts.length - 1 ? 5 : 3}" fill="${c.stroke}" opacity="${i === pts.length - 1 ? 1 : 0.4}"/>`
+    `<circle cx="${x}" cy="${y}" r="${i === pts.length - 1 ? 6 : 3}" fill="${c.stroke}" opacity="${i === pts.length - 1 ? 1 : 0.4}"/>`
   ).join("");
 
   lineChart.innerHTML = `
     <defs>
       <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${c.stroke}" stop-opacity="0.3"/>
+        <stop offset="0%" stop-color="${c.stroke}" stop-opacity="0.35"/>
         <stop offset="100%" stop-color="${c.stroke}" stop-opacity="0"/>
       </linearGradient>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
     </defs>
     <path d="${areaPath}" fill="url(#chartGrad)"/>
-    <polyline fill="none" stroke="${c.stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${pointStr}"/>
+    <polyline fill="none" stroke="${c.stroke}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="${pointStr}" filter="url(#glow)"/>
     ${dotsHTML}
-    <text x="${PAD}" y="20" fill="#64748b" font-size="11" font-family="Outfit,sans-serif">Min: ${min.toFixed(1)}</text>
-    <text x="${PAD}" y="36" fill="#64748b" font-size="11" font-family="Outfit,sans-serif">Max: ${max.toFixed(1)}</text>
+    <text x="${PAD}" y="20" fill="#4d5a8a" font-size="11" font-family="DM Mono,monospace">Min: ${min.toFixed(1)}</text>
+    <text x="${PAD}" y="36" fill="#4d5a8a" font-size="11" font-family="DM Mono,monospace">Max: ${max.toFixed(1)}</text>
   `;
 }
 
@@ -269,13 +273,18 @@ async function loadProfile() {
 
     profileData = result;
 
-    pageTitle.textContent = valueOrDash(result.profile.name) + " – Statistics";
+    pageTitle.textContent = "📊 " + valueOrDash(result.profile.name) + " – Statistics";
     watchInfo.textContent = "Watch: " + result.profile.watchID +
       " | Last update: " + formatTime(result.latest ? result.latest.time : null);
 
     renderPatientDetails(result.profile);
     renderSnapshot(result.latest, result.readings || []);
     renderChart(result.readings || [], metricSelect.value);
+
+    // Update hero banner
+    if (window.__updatePatientHero) {
+      window.__updatePatientHero(result.profile, result.readings || [], riskLabel(result.readings || []));
+    }
 
     if (chatLog.children.length === 0) {
       pushChatMessage("Bot:", "Data loaded. Ask about vitals, risk level, summary, or care plan.");
