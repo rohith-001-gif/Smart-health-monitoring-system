@@ -243,7 +243,7 @@ User Question: ${question}`;
 
 // ── ESP32 data ingestion (GET so ESP32 can use simple HTTP) ──────────────────
 app.get("/update", requireSupabase, async (req, res) => {
-  const watch_id = String(req.query.watchID || "").trim().toUpperCase();
+  const watch_id = String(req.query.watch_id || req.query.watchID || "").trim().toUpperCase();
   if (!watch_id) return res.status(400).send("watchID is required");
 
   const entry = {

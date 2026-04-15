@@ -51,10 +51,7 @@
   const char *serverUpdatePath = "/update";
   String watchID = "";
 
-// Put this inside setup(), before connectWiFiBlocking():
-watchID = "WCH" + String((uint32_t)ESP.getEfuseMac(), DEC);
-Serial.print("WatchID: ");
-Serial.println(watchID);
+
   // Sensor Values
   float heartRate  = 0.0f;
   float spo2       = 0.0f;
@@ -97,7 +94,7 @@ Serial.println(watchID);
 
   String buildUpdateURL() {
     String url = serverBaseURL + String(serverUpdatePath);
-    url += "?watchID=" + watchID;
+    url += "?watch_id=" + watchID;
     url += "&hr=" + String((int)heartRate);
     url += "&spo2=" + String((int)spo2);
     url += "&steps=" + String(stepCount);
@@ -608,6 +605,10 @@ Serial.println(watchID);
   // SETUP
   void setup() {
     Serial.begin(115200);
+    watchID = "WCH" + String((uint32_t)ESP.getEfuseMac(), DEC);
+
+Serial.print("WatchID: ");
+Serial.println(watchID);
     delay(500);
     pinMode(BUTTON, INPUT_PULLUP);
     pinMode(BUZZER, OUTPUT);
