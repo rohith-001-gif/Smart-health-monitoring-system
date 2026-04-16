@@ -73,7 +73,7 @@ form.addEventListener("submit", async (e) => {
     age:         ageInput.value.trim(),
     condition:   conditionInput.value.trim(),
     phone:       phoneInput.value.trim(),
-    doctorEmail: doctorEmail
+    doctorEmail
   };
 
   if (!payload.watchID || !payload.name || !payload.email) {
@@ -214,11 +214,12 @@ function buildReminderForm(watchID, listEl, statusEl) {
 
     const days = Array.from(frm.querySelectorAll(".repeat-days input:checked")).map(cb => cb.value);
     const payload = {
-      watch_id:      watchID,
-      medicine_name: frm.querySelector("[name=medicine]").value.trim(),
-      time:          frm.querySelector("[name=time]").value,
-      repeat_days:   days.join(",")
-    };
+  watch_id: watchID,
+  medicine_name: frm.querySelector("[name=medicine]").value.trim(),
+  time: frm.querySelector("[name=time]").value,
+  repeat_days: days.join(","),
+  doctor_email: doctorEmail   
+};
 
     try {
       const res    = await fetch("/addReminder", {
