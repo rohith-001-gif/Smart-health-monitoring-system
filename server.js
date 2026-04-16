@@ -597,4 +597,14 @@ app.post("/aiChat", async (req, res) => {
   }
 });
 
+// ── Root route (Render health checks) ───────────────────────────────────────
+app.get("/", (req, res) => {
+  return res.sendFile(path.join(__dirname, "public", "login.html"));
+});
+
+// ── Boot server ──────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`Arogya server running on port ${PORT}`);
+});
+
 
