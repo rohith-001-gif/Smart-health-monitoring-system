@@ -170,16 +170,76 @@ async function fetchRemindersForWatch(watchID) {
   }
 }
 
-function renderReminderList(listEl, reminders) {
+async function deleteReminder(reminderID, watchID, listEl, statusEl, deleteBtn) {
+  if (!Number.isInteger(Number(reminderID))) {
+    statusEl.textContent = "Unable to delete reminder.";
+    return;
+  }
+
+  if (deleteBtn) deleteBtn.disabled = true;
+  statusEl.textContent = "Deleting reminder...";
+
+  try {
+    const res = await fetch("/deleteReminder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reminder_id: Number(reminderID),
+        watch_id: String(watchID || "").trim().toUpperCase(),
+        doctor_email: String(doctorEmail || "").trim(),
+        doctorEmail: String(doctorEmail || "").trim()
+      })
+    });
+    const result = await res.json();
+
+    if (!res.ok || !result.success) {
+      statusEl.textContent = result.message || "Unable to delete reminder.";
+      return;
+    }
+
+    statusEl.textContent = "✓ Reminder deleted.";
+    renderReminderList(listEl, await fetchRemindersForWatch(watchID), watchID, statusEl);
+  } catch {
+    statusEl.textContent = "Server error.";
+  } finally {
+    if (deleteBtn) deleteBtn.disabled = false;
+  }
+}
+
+function renderReminderList(listEl, reminders, watchID, statusEl) {
   listEl.innerHTML = "";
   if (!reminders.length) {
     listEl.innerHTML = "<li class='reminder-empty'>No reminders yet.</li>";
     return;
   }
   reminders.forEach((item) => {
+    const reminderLabel = `${item.time || "--:--"} – ${item.medicine_name || "Medicine"} (${item.repeat_days || "-"})`;
+    const reminderID = Number(item.id);
     const li = document.createElement("li");
-    li.className   = "reminder-chip";
-    li.textContent = `${item.time || "--:--"} – ${item.medicine_name || "Medicine"} (${item.repeat_days || "-"})`;
+
+    if (!Number.isInteger(reminderID) || reminderID <= 0) {
+      li.className = "reminder-chip";
+      li.textContent = reminderLabel;
+      listEl.appendChild(li);
+      return;
+    }
+
+    li.className = "reminder-chip reminder-chip-row";
+
+    const text = document.createElement("span");
+    text.className = "reminder-chip-text";
+    text.textContent = reminderLabel;
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "secondary-btn reminder-delete-btn";
+    delBtn.textContent = "Delete";
+    delBtn.addEventListener("click", () => {
+      deleteReminder(reminderID, watchID, listEl, statusEl, delBtn);
+    });
+
+    li.appendChild(text);
+    li.appendChild(delBtn);
     listEl.appendChild(li);
   });
 }
@@ -238,7 +298,7 @@ function buildReminderForm(watchID, listEl, statusEl) {
       }
       frm.reset();
       statusEl.textContent = "✓ Reminder added.";
-      renderReminderList(listEl, await fetchRemindersForWatch(watchID));
+      renderReminderList(listEl, await fetchRemindersForWatch(watchID), watchID, statusEl);
     } catch {
       statusEl.textContent = "Server error.";
     } finally {
@@ -274,7 +334,7 @@ function createReminderCell(watch) {
   const toggleForm = async () => {
     const isHidden = frm.style.display === "none" || frm.style.display === "";
     frm.style.display = isHidden ? "flex" : "none";
-    if (isHidden) renderReminderList(list, await fetchRemindersForWatch(watch.watchID));
+    if (isHidden) renderReminderList(list, await fetchRemindersForWatch(watch.watchID), watch.watchID, statusEl);
   };
 
   cell.appendChild(header);
@@ -282,7 +342,7 @@ function createReminderCell(watch) {
   cell.appendChild(frm);
   cell.appendChild(statusEl);
 
-  fetchRemindersForWatch(watch.watchID).then((data) => renderReminderList(list, data));
+  fetchRemindersForWatch(watch.watchID).then((data) => renderReminderList(list, data, watch.watchID, statusEl));
 
   return { cell, toggleForm };
 }

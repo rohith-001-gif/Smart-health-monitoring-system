@@ -796,6 +796,25 @@ button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important;
   color: var(--text);
 }
 
+.reminder-chip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.reminder-chip-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-delete-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
 .reminder-empty {
   font-size: 13px;
   color: var(--dim);

@@ -184,12 +184,30 @@ async function dbInsertReminder(fields) {
 async function dbFetchReminders(watch_id) {
   const { data, error } = await supabase
     .from("reminders")
-    .select("watch_id, medicine_name, time, repeat_days, doctor_email, created_at")
+    .select("id, watch_id, medicine_name, time, repeat_days, doctor_email, created_at")
     .eq("watch_id", watch_id.toUpperCase())
     .order("time", { ascending: true })
     .limit(100);
   if (error) throw new Error(error.message);
   return Array.isArray(data) ? data : [];
+}
+
+async function dbGetReminderById(reminder_id) {
+  const { data, error } = await supabase
+    .from("reminders")
+    .select("id, watch_id, doctor_email")
+    .eq("id", reminder_id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data || null;
+}
+
+async function dbDeleteReminder(reminder_id) {
+  const { error } = await supabase
+    .from("reminders")
+    .delete()
+    .eq("id", reminder_id);
+  if (error) throw new Error(error.message);
 }
 
 // ─── Groq AI ──────────────────────────────────────────────────────────────────
@@ -594,6 +612,46 @@ app.post("/aiChat", async (req, res) => {
   } catch (err) {
     console.error("AI chat error:", err.message);
     return res.status(500).json({ success: false, message: "AI unavailable: " + err.message });
+  }
+});
+
+// ── Delete reminder ──────────────────────────────────────────────────────────
+app.post("/deleteReminder", requireSupabase, async (req, res) => {
+  const reminder_id = Number(req.body.reminder_id ?? req.body.id ?? 0);
+  const watch_id = String(req.body.watch_id || req.body.watchID || "").trim().toUpperCase();
+  let doctor_email = String(req.body.doctor_email || req.body.doctorEmail || "").trim();
+
+  if (!Number.isInteger(reminder_id) || reminder_id <= 0) {
+    return res.status(400).json({ success: false, message: "Valid reminder id required" });
+  }
+
+  try {
+    const reminder = await dbGetReminderById(reminder_id);
+    if (!reminder) {
+      return res.status(404).json({ success: false, message: "Reminder not found" });
+    }
+
+    const linkedDoctor = String(reminder.doctor_email || "").trim();
+    const reminderWatchID = String(reminder.watch_id || "").trim().toUpperCase();
+
+    if (!doctor_email && linkedDoctor) doctor_email = linkedDoctor;
+    if (!doctor_email) {
+      return res.status(400).json({ success: false, message: "doctor_email required" });
+    }
+
+    if (linkedDoctor && linkedDoctor.toLowerCase() !== doctor_email.toLowerCase()) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    if (watch_id && reminderWatchID && watch_id !== reminderWatchID) {
+      return res.status(403).json({ success: false, message: "Watch mismatch" });
+    }
+
+    await dbDeleteReminder(reminder_id);
+    return res.json({ success: true, message: "Reminder deleted" });
+  } catch (err) {
+    console.error("deleteReminder error:", err.message);
+    return res.status(500).json({ success: false, message: "Unable to delete reminder: " + err.message });
   }
 });
 
