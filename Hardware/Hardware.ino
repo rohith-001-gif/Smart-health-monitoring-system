@@ -6,6 +6,7 @@
 #include <time.h>
 #include <HTTPClient.h>
 #include <WiFiClient.h>
+#include <WiFiClientSecure.h>
 #include "MAX30100_PulseOximeter.h"
 
 // ── Pin Definitions ──────────────────────────────────────────
@@ -31,13 +32,13 @@
 #define MPU_ACCEL_OUT  0x3B
 
 // ── Timing ────────────────────────────────────────────────────
-#define POX_READ_MS          3000UL
+#define POX_READ_MS          1000UL
 #define SEND_INTERVAL_MS    30000UL
 #define MOTION_INTERVAL_MS     20UL
 #define DISPLAY_INTERVAL_MS   200UL   // faster refresh for smoother UI
-#define BTN_DEBOUNCE_MS       300UL
+#define BTN_DEBOUNCE_MS       180UL
 #define TIME_READ_TIMEOUT_MS   10UL
-#define HTTP_TIMEOUT_MS      4000UL
+#define HTTP_TIMEOUT_MS      2000UL
 #define WIFI_RETRY_MS        5000UL
 #define POX_STALE_MS        15000UL
 #define REMINDER_INTERVAL_MS 30000UL  // check reminders every 30s
@@ -45,7 +46,7 @@
 #define REMINDER_ALERT_MS     8000UL
 #define REMINDER_BEEP_ON_MS    140UL
 #define REMINDER_BEEP_OFF_MS   120UL
-#define CRITICAL_ALERT_COOLDOWN_MS 120000UL
+#define ALERT_ESCALATE_MS     10000UL
 
 // ── Reminder Storage ──────────────────────────────────────────
 #define MAX_REMINDERS 5
@@ -84,9 +85,10 @@ bool alertDismissed          = false;
 bool criticalAlertDismissed  = false;
 bool buzzerActive            = false;
 bool beepState               = false;
-bool lastCriticalState       = false;
 bool criticalScreenActive    = false;
 bool prevCriticalForDisplay  = false;
+bool criticalEscalated       = false;
+bool fallEscalated           = false;
 
 // ── Reminder State ────────────────────────────────────────────
 unsigned long lastReminderCheck = 0;
@@ -102,6 +104,8 @@ bool stepRise = false;
 
 // ── Display ───────────────────────────────────────────────────
 int page = 0;
+bool buttonLatched = false;
+bool lastButtonHigh = true;
 
 // ── Timers ────────────────────────────────────────────────────
 unsigned long lastPoxRead   = 0;
@@ -112,10 +116,12 @@ unsigned long lastBtnTime   = 0;
 unsigned long lastWiFiRetry = 0;
 unsigned long lastBeatSeen  = 0;
 unsigned long lastBeep      = 0;
-unsigned long lastCriticalAlertSent = 0;
 unsigned long criticalScreenSince   = 0;
 unsigned long reminderShownSince    = 0;
 unsigned long reminderBeepAt        = 0;
+unsigned long criticalAlarmSince    = 0;
+unsigned long fallAlarmSince        = 0;
+unsigned long lastAlertPostAt       = 0;
 
 // ── Thresholds ────────────────────────────────────────────────
 const float STEP_UP     =  2.5f;
@@ -128,6 +134,8 @@ const float FALL_THRESH = 19.0f;
 String getStatus();
 bool   isCritical();
 void   sendAlert(String type);
+void   updateAlertEscalation();
+void   dismissAlerts();
 void   showReminder();
 void   showFallAlert();
 void   showCriticalHR();
@@ -187,10 +195,44 @@ void onBeatDetected() { lastBeatSeen = millis(); }
 // BUTTON
 // ─────────────────────────────────────────────────────────────
 bool buttonPressedDebounced() {
-  if (digitalRead(BUTTON) != LOW) return false;
-  if (millis() - lastBtnTime < BTN_DEBOUNCE_MS) return false;
-  lastBtnTime = millis();
-  return true;
+  const bool currentHigh = (digitalRead(BUTTON) == HIGH);
+  const unsigned long now = millis();
+  bool pressed = false;
+
+  if (lastButtonHigh && !currentHigh && (now - lastBtnTime >= BTN_DEBOUNCE_MS)) {
+    pressed = true;
+    lastBtnTime = now;
+  }
+
+  lastButtonHigh = currentHigh;
+  return pressed;
+}
+
+void dismissAlerts() {
+  reminderActive = false;
+  reminderBeepInProgress = false;
+  reminderBeepToneOn = false;
+  reminderBeepCount = 0;
+  reminderBeepAt = 0;
+
+  fallDetected = false;
+  alertDismissed = true;
+
+  criticalAlertDismissed = true;
+  criticalScreenActive = false;
+  criticalEscalated = false;
+  fallEscalated = false;
+  criticalAlarmSince = 0;
+  fallAlarmSince = 0;
+
+  if (buzzerActive) {
+    ledcWrite(BUZZER, 0);
+    ledcDetach(BUZZER);
+    pinMode(BUZZER, OUTPUT);
+    digitalWrite(BUZZER, LOW);
+    buzzerActive = false;
+  }
+  beepState = false;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -228,7 +270,6 @@ void updateMotion() {
     fallDetected   = true;
     alertDismissed = false;
     Serial.println("FALL DETECTED!");
-    sendAlert("FALL");
   }
   if (!stepRise && delta > STEP_UP) stepRise = true;
   else if (stepRise && delta < STEP_DOWN) { stepRise = false; stepCount++; }
@@ -244,12 +285,6 @@ void updateBuzzer() {
   const bool criticalAlarm = (criticalNow && !criticalAlertDismissed);
 
   if (!criticalNow) criticalAlertDismissed = false;
-
-  if (criticalNow && (!lastCriticalState || (now - lastCriticalAlertSent >= CRITICAL_ALERT_COOLDOWN_MS))) {
-    sendAlert("CRITICAL");
-    lastCriticalAlertSent = now;
-  }
-  lastCriticalState = criticalNow;
 
   if (fallAlarm || criticalAlarm) {
     reminderBeepInProgress = false;
@@ -315,6 +350,36 @@ void updateBuzzer() {
     buzzerActive = false;
   }
   beepState = false;
+}
+
+void updateAlertEscalation() {
+  const unsigned long now = millis();
+  const bool criticalAlarm = (isCritical() && !criticalAlertDismissed);
+  const bool fallAlarm = (fallDetected && !alertDismissed);
+
+  if (criticalAlarm) {
+    if (criticalAlarmSince == 0) criticalAlarmSince = now;
+    if (!criticalEscalated && (now - criticalAlarmSince >= ALERT_ESCALATE_MS) && (now - lastAlertPostAt >= 1500UL)) {
+      sendAlert("CRITICAL");
+      criticalEscalated = true;
+      lastAlertPostAt = now;
+    }
+  } else {
+    criticalAlarmSince = 0;
+    criticalEscalated = false;
+  }
+
+  if (fallAlarm) {
+    if (fallAlarmSince == 0) fallAlarmSince = now;
+    if (!fallEscalated && (now - fallAlarmSince >= ALERT_ESCALATE_MS) && (now - lastAlertPostAt >= 1500UL)) {
+      sendAlert("FALL");
+      fallEscalated = true;
+      lastAlertPostAt = now;
+    }
+  } else {
+    fallAlarmSince = 0;
+    fallEscalated = false;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -666,15 +731,15 @@ void showReminder() {
 // ─────────────────────────────────────────────────────────────
 void sendData() {
   if (WiFi.status() != WL_CONNECTED) return;
-  WiFiClient client;
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
   String url = buildUpdateURL();
   Serial.print("URL: "); Serial.println(url);
-  if (heartRate == 0 || spo2 == 0) {
-    Serial.println("No finger - skipping API call");
+  if (!http.begin(client, url)) {
+    Serial.println("HTTP begin failed");
     return;
   }
-  http.begin(client, url);
   http.setTimeout(HTTP_TIMEOUT_MS);
   int httpCode = http.GET();
   Serial.print("Server: "); Serial.println(httpCode);
@@ -686,14 +751,24 @@ void sendData() {
 // ─────────────────────────────────────────────────────────────
 void sendAlert(String type) {
   if (WiFi.status() != WL_CONNECTED) return;
-  WiFiClient client;
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
-  String url = serverBaseURL + "/alert?watch_id=" + watchID + "&type=" + type;
-  http.begin(client, url);
+  String url = serverBaseURL + "/alert?watch_id=" + watchID;
+  url += "&type=" + urlEncode(type);
+  url += "&hr=" + String((int)heartRate);
+  url += "&spo2=" + String((int)spo2);
+  url += "&steps=" + String(stepCount);
+  url += "&status=" + urlEncode(getStatus());
+  if (!http.begin(client, url)) {
+    Serial.println("Alert begin failed");
+    return;
+  }
   http.setTimeout(1500UL);
-  http.GET();
+  int code = http.GET();
   http.end();
-  Serial.println("Alert sent: " + type);
+  Serial.print("Alert sent: "); Serial.print(type);
+  Serial.print(" code="); Serial.println(code);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -704,10 +779,14 @@ void checkReminders() {
   if (millis() - lastReminderCheck < REMINDER_INTERVAL_MS) return;
   lastReminderCheck = millis();
 
-  WiFiClient client;
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
   String url = serverBaseURL + "/getReminders?watch_id=" + watchID;
-  http.begin(url);  
+  if (!http.begin(client, url)) {
+    Serial.println("Reminder begin failed");
+    return;
+  }
   http.setTimeout(HTTP_TIMEOUT_MS);
   int code = http.GET();
 
@@ -857,8 +936,11 @@ void updatePox() {
     return;
   }
 
-  if (liveHR   >= 30.0f  && liveHR   <= 220.0f) hrBuf[avgIdx]  = liveHR;
-  if (liveSpO2 >= 70.0f  && liveSpO2 <= 100.0f) sp2Buf[avgIdx] = liveSpO2;
+  const bool hrValid = (liveHR   >= 30.0f  && liveHR   <= 220.0f);
+  const bool spValid = (liveSpO2 >= 70.0f  && liveSpO2 <= 100.0f);
+
+  hrBuf[avgIdx]  = hrValid ? liveHR : 0.0f;
+  sp2Buf[avgIdx] = spValid ? liveSpO2 : 0.0f;
   avgIdx = (avgIdx + 1) % AVG_SIZE;
   if (validSamples < AVG_SIZE) validSamples++;
 
@@ -868,8 +950,8 @@ void updatePox() {
     if (hrBuf[i]  >= 30.0f) { hrSum  += hrBuf[i];  hrCnt++;  }
     if (sp2Buf[i] >= 70.0f) { sp2Sum += sp2Buf[i]; sp2Cnt++; }
   }
-  if (hrCnt  >= 2) heartRate = hrSum  / hrCnt;
-  if (sp2Cnt >= 2) spo2      = sp2Sum / sp2Cnt;
+  heartRate = (hrCnt  >= 2) ? (hrSum  / hrCnt) : 0.0f;
+  spo2      = (sp2Cnt >= 2) ? (sp2Sum / sp2Cnt) : 0.0f;
 
   Serial.print("DISP HR=");   Serial.print(heartRate,1);
   Serial.print("  SpO2=");    Serial.print(spo2,1);
@@ -880,10 +962,24 @@ void updatePox() {
 // DISPLAY UPDATE
 // ─────────────────────────────────────────────────────────────
 void updateDisplay() {
+  if (buttonPressedDebounced()) {
+    buttonLatched = true;
+  }
+
+  const bool criticalNow = isCritical();
+  const bool hasDismissibleAlert = reminderActive || reminderBeepInProgress ||
+    (fallDetected && !alertDismissed) || criticalScreenActive || (criticalNow && !criticalAlertDismissed);
+
+  if (buttonLatched && hasDismissibleAlert) {
+    buttonLatched = false;
+    dismissAlerts();
+    return;
+  }
+
   // Reminder alert has highest priority
   if (reminderActive) {
     showReminder();
-    if (buttonPressedDebounced() || (millis() - reminderShownSince >= REMINDER_ALERT_MS)) {
+    if (millis() - reminderShownSince >= REMINDER_ALERT_MS) {
       reminderActive = false;
       reminderBeepInProgress = false;
       reminderBeepToneOn = false;
@@ -899,11 +995,8 @@ void updateDisplay() {
   // Fall alert
   if (fallDetected && !alertDismissed) {
     showFallAlert();
-    if (buttonPressedDebounced()) { fallDetected = false; alertDismissed = true; }
     return;
   }
-
-  const bool criticalNow = isCritical();
 
   if (!criticalNow) {
     criticalAlertDismissed = false;
@@ -920,17 +1013,15 @@ void updateDisplay() {
   // Show critical popup briefly, then return to normal pages
   if (criticalScreenActive) {
     showCriticalHR();
-    if (buttonPressedDebounced()) {
-      criticalAlertDismissed = true;
-      criticalScreenActive = false;
-    } else if (millis() - criticalScreenSince >= CRITICAL_POPUP_MS) {
+    if (millis() - criticalScreenSince >= CRITICAL_POPUP_MS) {
       criticalScreenActive = false;
     }
     return;
   }
 
   // Normal page navigation
-  if (buttonPressedDebounced()) {
+  if (buttonLatched) {
+    buttonLatched = false;
     page++;
     if (page > 3) page = 0;
   }
@@ -954,6 +1045,7 @@ void setup() {
   Serial.println(watchID);
 
   pinMode(BUTTON, INPUT_PULLUP);
+  lastButtonHigh = (digitalRead(BUTTON) == HIGH);
   pinMode(BUZZER, OUTPUT);
   digitalWrite(BUZZER, LOW);
 
@@ -976,6 +1068,9 @@ void setup() {
   configTime(19800, 0, "pool.ntp.org", "time.nist.gov");
   initMPU();
   initMAX30100();
+
+  // Stagger reminder/data HTTP calls so they don't block together
+  lastReminderCheck = millis() - (REMINDER_INTERVAL_MS / 2);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -985,12 +1080,20 @@ void loop() {
   updatePox();       // MUST be first — runs pox.update() every iteration
   updateMotion();
   updateBuzzer();
+  updateAlertEscalation();
   ensureWiFi();
-  checkReminders();
+  updateDisplay();
+
+  bool didNetworkCall = false;
   if (millis() - lastSend >= SEND_INTERVAL_MS) {
     sendData();
     lastSend = millis();
+    didNetworkCall = true;
   }
-  updateDisplay();
+
+  if (!didNetworkCall) {
+    checkReminders();
+  }
+
   delay(1);
 }

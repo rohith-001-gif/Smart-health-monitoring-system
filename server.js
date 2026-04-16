@@ -14,6 +14,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT         = process.env.PORT || 3000;
 const CRITICAL_HR  = 120;
 const CRITICAL_SPO2 = 90;
+const ALERT_MAIL_COOLDOWN_MS = 60000;
 
 const GROQ_API_KEY = (process.env.GROQ_API_KEY || "").trim();
 const GROQ_MODEL   = (process.env.GROQ_MODEL || "llama-3.3-70b-versatile").trim();
@@ -36,6 +37,8 @@ const transporter = (MAIL_USER && MAIL_PASS)
   ? nodemailer.createTransport({ service: "gmail", auth: { user: MAIL_USER, pass: MAIL_PASS } })
   : null;
 
+const lastAlertMailAt = new Map();
+
 // ─── Middleware: require Supabase ─────────────────────────────────────────────
 
 function requireSupabase(req, res, next) {
@@ -49,9 +52,20 @@ function requireSupabase(req, res, next) {
 
 function isCriticalReading(r) {
   if (!r) return false;
+  const status = String(r.status || "").toLowerCase();
   return Number(r.hr) > CRITICAL_HR
     || Number(r.spo2) < CRITICAL_SPO2
-    || String(r.status || "").toLowerCase().includes("critical");
+    || status.includes("critical")
+    || status.includes("fall");
+}
+
+function shouldSendAlertEmail(watch_id, type) {
+  const key = `${String(watch_id || "").toUpperCase()}::${String(type || "").toUpperCase()}`;
+  const now = Date.now();
+  const prev = lastAlertMailAt.get(key) || 0;
+  if (now - prev < ALERT_MAIL_COOLDOWN_MS) return false;
+  lastAlertMailAt.set(key, now);
+  return true;
 }
 
 function sendCriticalEmail(patient, entry) {
@@ -280,13 +294,43 @@ app.get("/update", requireSupabase, async (req, res) => {
     return res.status(500).send("DB error: " + err.message);
   }
 
-  if (isCriticalReading(entry)) {
-    dbGetPatient(watch_id)
-      .then((p) => { if (p) sendCriticalEmail(p, entry); })
-      .catch((e) => console.warn("Email lookup failed:", e.message));
+  res.send("OK");
+});
+
+// ── Escalated alert from hardware (after 10s not dismissed) ─────────────────
+app.get("/alert", requireSupabase, async (req, res) => {
+  const watch_id = String(req.query.watch_id || req.query.watchID || "").trim().toUpperCase();
+  const type = String(req.query.type || "CRITICAL").trim().toUpperCase();
+
+  if (!watch_id) return res.status(400).json({ success: false, message: "watch_id required" });
+
+  const status = String(req.query.status || type).trim().toUpperCase();
+  const entry = {
+    watch_id,
+    hr: Number(req.query.hr) || 0,
+    spo2: Number(req.query.spo2) || 0,
+    steps: Number(req.query.steps) || 0,
+    status,
+    time: new Date().toISOString()
+  };
+
+  try {
+    await dbInsertReading(entry);
+  } catch (err) {
+    console.error("alert insert failed:", err.message);
+    return res.status(500).json({ success: false, message: "DB error: " + err.message });
   }
 
-  res.send("OK");
+  try {
+    const patient = await dbGetPatient(watch_id);
+    if (patient && shouldSendAlertEmail(watch_id, type)) {
+      sendCriticalEmail(patient, entry);
+    }
+  } catch (err) {
+    console.warn("alert email failed:", err.message);
+  }
+
+  return res.json({ success: true, message: "Alert recorded" });
 });
 
 // ── Readings for a watch ─────────────────────────────────────────────────────
