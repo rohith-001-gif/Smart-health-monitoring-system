@@ -73,7 +73,7 @@ form.addEventListener("submit", async (e) => {
     age:         ageInput.value.trim(),
     condition:   conditionInput.value.trim(),
     phone:       phoneInput.value.trim(),
-    doctorEmail
+    doctorEmail: doctorEmail
   };
 
   if (!payload.watchID || !payload.name || !payload.email) {
