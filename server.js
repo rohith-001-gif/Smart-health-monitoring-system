@@ -68,7 +68,7 @@ function shouldSendAlertEmail(watch_id, type) {
   return true;
 }
 
-function sendCriticalEmail(patient, entry) {
+function sendCriticalEmail(patient, entry, alertType) {
   if (!transporter || !patient) return;
   const to = [];
   const doc = String(patient.doctor_email || "").trim();
@@ -76,10 +76,34 @@ function sendCriticalEmail(patient, entry) {
   if (doc) to.push(doc);
   if (pat && pat.toLowerCase() !== doc.toLowerCase()) to.push(pat);
   if (!to.length) return;
+
+  const typeLabel = alertType === "FALL" ? "🚨 Fall Detected" : "⚠️ Critical HR / SpO2";
+  const subject = `${typeLabel} — Arogya Alert for ${patient.name || entry.watch_id}`;
+  const body = [
+    `AROGYA HEALTH ALERT`,
+    ``,
+    `Patient : ${patient.name || "Unknown"}`,
+    `Watch ID: ${entry.watch_id}`,
+    `Alert   : ${typeLabel}`,
+    ``,
+    `Current Readings:`,
+    `  Heart Rate : ${entry.hr} bpm`,
+    `  SpO2       : ${entry.spo2} %`,
+    `  Steps      : ${entry.steps}`,
+    `  Status     : ${entry.status}`,
+    `  Time       : ${new Date(entry.time).toLocaleString()}`,
+    ``,
+    `The watch has been alarming for 10 seconds with no response.`,
+    `Please check on the patient immediately.`,
+    ``,
+    `— Arogya SmartWatch System`
+  ].join("\n");
+
   transporter.sendMail({
+    from: MAIL_USER,
     to: to.join(","),
-    subject: "⚠️ Arogya Critical Alert",
-    text: `Critical alert for ${patient.name}.\nWatch: ${entry.watch_id}\nHR: ${entry.hr}, SpO2: ${entry.spo2}, Steps: ${entry.steps}\nTime: ${entry.time}`
+    subject,
+    text: body
   }).catch((e) => console.error("Email failed:", e.message));
 }
 
@@ -324,7 +348,7 @@ app.get("/alert", requireSupabase, async (req, res) => {
   try {
     const patient = await dbGetPatient(watch_id);
     if (patient && shouldSendAlertEmail(watch_id, type)) {
-      sendCriticalEmail(patient, entry);
+      sendCriticalEmail(patient, entry, type);
     }
   } catch (err) {
     console.warn("alert email failed:", err.message);
@@ -708,5 +732,3 @@ app.get("/", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Arogya server running on port ${PORT}`);
 });
-
-
