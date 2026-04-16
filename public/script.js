@@ -191,13 +191,13 @@ function buildReminderForm(watchID, listEl, statusEl) {
     <input name="medicine" placeholder="Medicine Name" required>
     <input name="time" type="time" required>
     <div class="repeat-days">
-      <label><input type="checkbox" value="Mon"> Mon</label>
-      <label><input type="checkbox" value="Tue"> Tue</label>
-      <label><input type="checkbox" value="Wed"> Wed</label>
-      <label><input type="checkbox" value="Thu"> Thu</label>
-      <label><input type="checkbox" value="Fri"> Fri</label>
-      <label><input type="checkbox" value="Sat"> Sat</label>
-      <label><input type="checkbox" value="Sun"> Sun</label>
+      <label><input type="checkbox" name="repeat_days" value="Mon"> Mon</label>
+      <label><input type="checkbox" name="repeat_days" value="Tue"> Tue</label>
+      <label><input type="checkbox" name="repeat_days" value="Wed"> Wed</label>
+      <label><input type="checkbox" name="repeat_days" value="Thu"> Thu</label>
+      <label><input type="checkbox" name="repeat_days" value="Fri"> Fri</label>
+      <label><input type="checkbox" name="repeat_days" value="Sat"> Sat</label>
+      <label><input type="checkbox" name="repeat_days" value="Sun"> Sun</label>
     </div>
     <div class="reminder-actions">
       <button type="submit">Save Reminder</button>
@@ -212,14 +212,18 @@ function buildReminderForm(watchID, listEl, statusEl) {
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving…";
 
-    const days = Array.from(frm.querySelectorAll(".repeat-days input:checked")).map(cb => cb.value);
+    const formData = new FormData(frm);
+    const days = formData.getAll("repeat_days")
+      .map((day) => String(day || "").trim())
+      .filter(Boolean);
     const payload = {
-  watch_id: watchID,
-  medicine_name: frm.querySelector("[name=medicine]").value.trim(),
-  time: frm.querySelector("[name=time]").value,
-  repeat_days: days.join(","),
-  doctor_email: doctorEmail   
-};
+      watch_id: String(watchID || "").trim().toUpperCase(),
+      medicine_name: String(formData.get("medicine") || "").trim(),
+      time: String(formData.get("time") || "").trim(),
+      repeat_days: days.join(","),
+      doctor_email: String(doctorEmail || "").trim(),
+      doctorEmail: String(doctorEmail || "").trim()
+    };
 
     try {
       const res    = await fetch("/addReminder", {

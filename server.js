@@ -516,16 +516,26 @@ app.post("/addReminder", requireSupabase, async (req, res) => {
   const watch_id      = String(req.body.watch_id    || req.body.watchID || "").trim().toUpperCase();
   const medicine_name = String(req.body.medicine_name || "").trim();
   const time          = String(req.body.time          || "").trim();
-  const repeat_days   = String(req.body.repeat_days   || "").trim();
-  const doctor_email  = String(req.body.doctor_email  || "").trim();
+  const repeatDaysRaw = req.body.repeat_days ?? req.body.repeatDays ?? "";
+  const repeat_days   = Array.isArray(repeatDaysRaw)
+    ? repeatDaysRaw.map((day) => String(day || "").trim()).filter(Boolean).join(",")
+    : String(repeatDaysRaw || "").trim();
+  let doctor_email  = String(req.body.doctor_email || req.body.doctorEmail || "").trim();
 
-  if (!watch_id || !medicine_name || !time || !repeat_days || !doctor_email) {
+  if (!watch_id || !medicine_name || !time || !repeat_days) {
     return res.status(400).json({ success: false, message: "All reminder fields required" });
   }
 
   try {
     const patient = await dbGetPatient(watch_id);
-    if (patient && patient.doctor_email && patient.doctor_email !== doctor_email) {
+    const linkedDoctor = String((patient && patient.doctor_email) || "").trim();
+    if (!doctor_email && linkedDoctor) doctor_email = linkedDoctor;
+
+    if (!doctor_email) {
+      return res.status(400).json({ success: false, message: "All reminder fields required" });
+    }
+
+    if (linkedDoctor && linkedDoctor.toLowerCase() !== doctor_email.toLowerCase()) {
       return res.status(403).json({ success: false, message: "Watch linked to another doctor" });
     }
     await dbInsertReminder({ watch_id, medicine_name, time, repeat_days, doctor_email });
