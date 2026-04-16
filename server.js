@@ -594,3 +594,39 @@ app.get("/", (req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Arogya server running on port ${PORT}`);
 });
+app.get("/getReminders", async (req, res) => {
+  try {
+    const watch_id = req.query.watch_id;
+
+    if (!watch_id) {
+      return res.json({ success: false, message: "watch_id required" });
+    }
+
+    const reminders = await dbFetchReminders(watch_id);
+
+    res.json({ success: true, reminders });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
+app.post("/addReminder", async (req, res) => {
+  try {
+    const { watchID, medicine, time, days, doctorEmail } = req.body;
+
+    if (!watchID || !medicine || !time || !days) {
+      return res.json({ success: false, message: "All reminder fields required" });
+    }
+
+    await dbInsertReminder({
+      watch_id: watchID.toUpperCase(),
+      medicine_name: medicine,
+      time,
+      repeat_days: days,
+      doctor_email: doctorEmail
+    });
+
+    res.json({ success: true, message: "Reminder saved" });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
